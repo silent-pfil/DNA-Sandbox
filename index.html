@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DNA Sandbox</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;background:#020a06;overflow:hidden;font-family:'SF Mono','Consolas','Courier New',monospace;}
+#mount{position:fixed;inset:0;touch-action:none;}
+canvas{touch-action:none;}
+
+#header{position:fixed;top:15px;left:50%;transform:translateX(-50%);color:rgba(80,220,140,0.26);font-size:9px;letter-spacing:4px;pointer-events:none;white-space:nowrap;z-index:10;}
+
+#top-bar{position:fixed;top:10px;left:18px;display:flex;gap:6px;align-items:center;z-index:20;}
+.tier-btn{padding:5px 11px;font-size:10px;letter-spacing:2px;cursor:pointer;border-radius:4px;transition:all 0.2s;font-family:'SF Mono','Consolas','Courier New',monospace;background:rgba(0,0,0,0);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.22);}
+.tier-btn:hover{color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.2);}
+.tier-btn.active{border-color:rgba(80,220,140,0.5);color:rgba(80,220,140,0.9);background:rgba(80,220,140,0.08);}
+.top-sep{width:1px;height:16px;background:rgba(255,255,255,0.07);margin:0 2px;}
+.icon-btn{padding:5px 11px;font-size:10px;letter-spacing:2px;cursor:pointer;border-radius:4px;transition:all 0.2s;font-family:'SF Mono','Consolas','Courier New',monospace;background:rgba(0,0,0,0);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.28);}
+.icon-btn:hover{color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25);}
+.icon-btn.active{background:rgba(80,220,140,0.1);border-color:rgba(80,220,140,0.4);color:rgba(80,220,140,0.9);}
+
+.panel{background:rgba(2,12,6,0.90);border:1px solid rgba(80,220,140,0.1);border-radius:6px;padding:13px 16px;position:fixed;font-family:'SF Mono','Consolas','Courier New',monospace;}
+
+/* ── TIER I ── */
+#tier1-ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;padding:52px 20px 20px;}
+#base-title{font-size:9px;letter-spacing:5px;color:rgba(80,220,140,0.35);margin-bottom:18px;text-align:center;}
+#base-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;width:min(92vw,580px);}
+.base-card{background:rgba(2,12,6,0.88);border-radius:8px;padding:16px;cursor:pointer;transition:all 0.2s;border:1px solid rgba(80,220,140,0.08);}
+.base-card:hover{border-color:rgba(80,220,140,0.35);background:rgba(2,18,8,0.95);}
+.base-card.selected{border-color:rgba(80,220,140,0.6);background:rgba(4,22,10,0.98);}
+.base-symbol{font-size:42px;font-weight:300;line-height:1;margin-bottom:6px;}
+.base-name{font-size:11px;color:rgba(180,220,200,0.7);margin-bottom:4px;}
+.base-pair{font-size:9px;letter-spacing:2px;margin-bottom:8px;}
+.base-desc{font-size:8px;line-height:1.7;color:rgba(100,160,130,0.55);}
+.base-formula{font-size:9px;letter-spacing:1px;margin-top:6px;opacity:0.5;}
+#base-detail{width:min(92vw,580px);margin-top:12px;}
+#t1-hint{margin-top:10px;font-size:8px;letter-spacing:3px;color:rgba(80,180,120,0.22);text-align:center;}
+
+/* ── TIER II ── */
+#tier2-ui{display:none;}
+#t2-info{bottom:18px;left:18px;width:236px;}
+#t2-conf{bottom:18px;right:18px;width:182px;}
+#t2-legend{position:fixed;top:15px;right:18px;text-align:right;pointer-events:none;font-size:8px;letter-spacing:1px;line-height:2.5;color:rgba(100,180,140,0.3);}
+#drag-hint{position:fixed;top:50%;left:14px;font-size:8px;color:rgba(80,180,120,0.13);letter-spacing:1px;writing-mode:vertical-rl;transform:translateY(-50%) rotate(180deg);pointer-events:none;}
+
+/* ── SCALE BAR ── */
+#scale-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;display:none;}
+#scale-label{font-size:8px;color:rgba(80,220,140,0.32);letter-spacing:2px;margin-bottom:4px;}
+#scale-line{height:1px;background:rgba(80,220,140,0.22);margin:0 auto;transition:width 0.4s;}
+#scale-note{font-size:7px;color:rgba(60,160,100,0.18);letter-spacing:1px;margin-top:4px;}
+
+/* ── TIER III ── */
+#tier3-ui{display:none;position:fixed;inset:0;pointer-events:none;z-index:5;}
+#t3-panel{position:fixed;bottom:18px;right:18px;width:252px;pointer-events:all;}
+#t3-label{position:fixed;top:48px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:3px;color:rgba(80,220,140,0.32);pointer-events:none;white-space:nowrap;}
+#t3-stage{position:fixed;bottom:18px;left:18px;pointer-events:all;}
+#t3-replay-btn{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);pointer-events:all;}
+
+/* ── TIER IV ── */
+#tier4-ui{display:none;position:fixed;inset:0;pointer-events:none;z-index:5;}
+#t4-selector{position:fixed;top:46px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:all;flex-wrap:wrap;justify-content:center;max-width:96vw;}
+.trait-group{display:flex;flex-direction:column;gap:4px;align-items:center;}
+.trait-label{font-size:7px;letter-spacing:2px;color:rgba(80,180,120,0.4);}
+.trait-opts{display:flex;gap:4px;}
+.trait-btn{padding:4px 9px;font-size:9px;letter-spacing:1px;cursor:pointer;border-radius:3px;transition:all 0.2s;font-family:'SF Mono','Consolas','Courier New',monospace;background:rgba(0,0,0,0);border:1px solid rgba(80,220,140,0.12);color:rgba(255,255,255,0.22);}
+.trait-btn:hover{color:rgba(255,255,255,0.6);}
+.trait-btn.active{border-color:rgba(80,220,140,0.5);color:rgba(80,220,140,0.9);background:rgba(80,220,140,0.08);}
+#t4-panel{position:fixed;bottom:18px;left:18px;width:240px;pointer-events:all;}
+#t4-mutation{position:fixed;bottom:18px;right:18px;width:235px;pointer-events:all;}
+#t4-gene-label{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;letter-spacing:2px;color:rgba(80,220,140,0.0);pointer-events:none;transition:color 1s;text-align:center;line-height:1.9;}
+#t4-gene-label.visible{color:rgba(80,220,140,0.42);}
+
+/* ── TOUR ── */
+#tour-panel{position:fixed;left:50%;bottom:115px;transform:translateX(-50%);width:min(90vw,460px);background:rgba(2,12,6,0.96);border:1px solid rgba(80,220,140,0.16);border-radius:8px;padding:20px 24px;display:none;z-index:50;}
+#tour-panel.open{display:block;}
+#tour-title{font-size:14px;color:rgba(180,240,210,0.92);margin-bottom:9px;font-weight:400;line-height:1.4;}
+#tour-body{font-size:10px;line-height:1.85;color:rgba(100,180,140,0.65);}
+#tour-nav{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+.tour-btn{padding:5px 14px;font-size:9px;letter-spacing:2px;background:transparent;border:1px solid rgba(80,220,140,0.16);color:rgba(80,220,140,0.45);border-radius:3px;cursor:pointer;font-family:'SF Mono','Consolas','Courier New',monospace;transition:all 0.2s;}
+.tour-btn:hover{color:rgba(80,220,140,0.9);border-color:rgba(80,220,140,0.5);}
+.tour-btn:disabled{opacity:0.16;cursor:default;}
+#tour-dots{display:flex;gap:5px;}
+.tour-dot{width:5px;height:5px;border-radius:50%;background:rgba(80,220,140,0.18);transition:background 0.2s;}
+.tour-dot.active{background:rgba(80,220,140,0.7);}
+
+.preview-banner{background:rgba(2,12,6,0.90);border:1px solid rgba(255,180,50,0.18);border-radius:5px;padding:10px 14px;font-size:8px;letter-spacing:2px;color:rgba(255,180,50,0.42);line-height:1.8;}
+.preview-banner span{color:rgba(255,180,50,0.65);display:block;margin-bottom:4px;}
+
+@media (max-width:600px),(orientation:portrait){
+  #top-bar{top:6px;left:6px;gap:4px;flex-wrap:wrap;max-width:calc(100vw - 12px);}
+  .tier-btn,.icon-btn{padding:4px 7px;font-size:9px;letter-spacing:1px;}
+  .top-sep{display:none;}
+  #header{display:none;}
+  #tier1-ui{padding:52px 8px 8px;}
+  #base-grid{gap:8px;width:99vw;}
+  .base-symbol{font-size:30px;}
+  #t2-info{bottom:8px;left:8px;right:auto;width:auto;max-width:calc(55vw - 12px);padding:8px 10px;}
+  #t2-conf{bottom:8px;right:8px;left:auto;width:auto;max-width:calc(45vw - 12px);padding:8px 10px;}
+  #t2-legend{display:none;}
+  #drag-hint{display:none;}
+  #t3-panel{top:50px;right:8px;left:8px;bottom:auto;width:auto;padding:8px 10px;}
+  #t3-label{font-size:7px;top:44px;}
+  #t3-stage{bottom:8px;left:8px;right:8px;font-size:7px;}
+  #t4-selector{top:48px;gap:5px;}
+  .trait-btn{padding:3px 7px;font-size:8px;}
+  #t4-panel{bottom:8px;left:8px;right:auto;width:auto;max-width:calc(55vw - 12px);padding:8px 10px;}
+  #t4-mutation{bottom:8px;right:8px;left:auto;width:auto;max-width:calc(45vw - 12px);padding:8px 10px;}
+  #tour-panel{bottom:8px;left:8px;right:8px;width:auto;transform:none;padding:12px 14px;}
+  #tour-title{font-size:12px;}
+  #tour-body{font-size:9px;}
+}
+@media (max-height:520px){
+  #base-grid{gap:6px;}
+  .base-card{padding:10px;}
+  .base-symbol{font-size:26px;}
+  .base-desc{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="mount"></div>
+<div id="header">DNA SANDBOX · TIER I</div>
+
+<div id="top-bar">
+  <button class="tier-btn active" data-tier="1">TIER I</button>
+  <button class="tier-btn" data-tier="2">TIER II</button>
+  <button class="tier-btn" data-tier="3">TIER III</button>
+  <button class="tier-btn" data-tier="4">TIER IV</button>
+  <div class="top-sep"></div>
+  <button class="icon-btn" id="btn-tour">TOUR</button>
+  <button class="icon-btn" id="btn-bg">☽ VOID</button>
+</div>
+
+<!-- TIER I -->
+<div id="tier1-ui">
+  <div id="base-title">THE FOUR NUCLEOTIDE BASES · SELECT TO EXPLORE</div>
+  <div id="base-grid">
+    <div class="base-card" data-base="A">
+      <div class="base-symbol" style="color:rgba(255,180,60,0.9)">A</div>
+      <div class="base-name">Adenine</div>
+      <div class="base-pair" style="color:rgba(255,180,60,0.6)">PAIRS WITH → T</div>
+      <div class="base-desc">A purine base with a double-ring structure. Forms two hydrogen bonds with Thymine. Found in ATP — the energy currency of every living cell.</div>
+      <div class="base-formula" style="color:rgba(255,180,60,0.4)">C₅H₅N₅</div>
+    </div>
+    <div class="base-card" data-base="T">
+      <div class="base-symbol" style="color:rgba(80,160,255,0.9)">T</div>
+      <div class="base-name">Thymine</div>
+      <div class="base-pair" style="color:rgba(80,160,255,0.6)">PAIRS WITH → A</div>
+      <div class="base-desc">A pyrimidine base with a single-ring structure. Forms two hydrogen bonds with Adenine. Unique to DNA — replaced by Uracil in RNA.</div>
+      <div class="base-formula" style="color:rgba(80,160,255,0.4)">C₅H₆N₂O₂</div>
+    </div>
+    <div class="base-card" data-base="G">
+      <div class="base-symbol" style="color:rgba(80,220,140,0.9)">G</div>
+      <div class="base-name">Guanine</div>
+      <div class="base-pair" style="color:rgba(80,220,140,0.6)">PAIRS WITH → C</div>
+      <div class="base-desc">A purine base. Forms three hydrogen bonds with Cytosine — the strongest pairing in DNA. High GC content makes DNA more heat-resistant.</div>
+      <div class="base-formula" style="color:rgba(80,220,140,0.4)">C₅H₅N₅O</div>
+    </div>
+    <div class="base-card" data-base="C">
+      <div class="base-symbol" style="color:rgba(200,100,255,0.9)">C</div>
+      <div class="base-name">Cytosine</div>
+      <div class="base-pair" style="color:rgba(200,100,255,0.6)">PAIRS WITH → G</div>
+      <div class="base-desc">A pyrimidine base. Forms three hydrogen bonds with Guanine. Cytosine can spontaneously deaminate — one of the most common sources of DNA mutation.</div>
+      <div class="base-formula" style="color:rgba(200,100,255,0.4)">C₄H₅N₃O</div>
+    </div>
+  </div>
+  <div id="t1-hint">CLICK ANY BASE TO VISUALIZE ITS 3D MOLECULAR STRUCTURE IN TIER II</div>
+</div>
+
+<!-- TIER II -->
+<div id="tier2-ui">
+  <div class="panel" id="t2-info">
+    <div style="display:flex;align-items:baseline;gap:11px;margin-bottom:10px">
+      <span id="t2-symbol" style="font-size:48px;font-weight:300;line-height:1;color:rgba(80,220,140,0.9);transition:color 0.4s">A·T</span>
+    </div>
+    <div id="t2-name" style="color:rgba(180,220,200,0.8);font-size:12px;margin-bottom:6px">Double Helix · 12 Base Pairs</div>
+    <div id="t2-stats" style="font-size:10px;line-height:2.0;color:rgba(80,160,120,0.5)"></div>
+    <div id="t2-desc" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(80,220,140,0.06);color:rgba(60,140,100,0.58);font-size:9px;line-height:1.75;"></div>
+  </div>
+  <div class="panel" id="t2-conf">
+    <div style="font-size:8px;letter-spacing:2px;color:rgba(80,180,120,0.28);margin-bottom:8px">SCIENTIFIC CONFIDENCE</div>
+    <div style="height:2px;background:rgba(80,220,140,0.06);border-radius:2px;margin-bottom:8px;overflow:hidden">
+      <div id="t2-conf-bar" style="height:100%;width:99%;border-radius:2px;background:linear-gradient(90deg,rgba(80,220,140,0.8),rgba(80,220,140,0.3));transition:width 0.5s"></div>
+    </div>
+    <div style="font-size:26px;font-weight:300;color:rgba(80,220,140,0.85)">99 <span style="font-size:10px;color:rgba(80,180,120,0.28)">%</span></div>
+    <div style="margin-top:5px;font-size:7.5px;letter-spacing:1px;color:rgba(40,120,80,0.42)">CRYSTALLOGRAPHY · X-RAY VERIFIED</div>
+    <div id="t2-base-key" style="margin-top:9px;border-top:1px solid rgba(80,220,140,0.06);padding-top:8px;"></div>
+  </div>
+  <div id="t2-legend">
+    <div><span style="color:rgba(255,180,60,0.65)">● </span>ADENINE</div>
+    <div><span style="color:rgba(80,160,255,0.65)">● </span>THYMINE</div>
+    <div><span style="color:rgba(80,220,140,0.65)">● </span>GUANINE</div>
+    <div><span style="color:rgba(200,100,255,0.65)">● </span>CYTOSINE</div>
+    <div><span style="color:rgba(200,200,200,0.35)">— </span>BACKBONE</div>
+    <div><span style="color:rgba(160,255,220,0.3)">~ </span>H-BOND</div>
+  </div>
+  <div id="drag-hint">DRAG TO SPIN · SCROLL TO ZOOM</div>
+</div>
+
+<!-- SCALE BAR -->
+<div id="scale-wrap">
+  <div id="scale-label">1 nm</div>
+  <div id="scale-line" style="width:80px;"></div>
+  <div id="scale-note">ONE BASE PAIR = 0.34 nm</div>
+</div>
+
+<!-- TIER III -->
+<div id="tier3-ui">
+  <div id="t3-label">DNA REPLICATION · SEMI-CONSERVATIVE MODEL · WATSON-CRICK 1953</div>
+  <div class="panel" id="t3-panel">
+    <div style="font-size:8px;letter-spacing:2px;color:rgba(80,220,140,0.32);margin-bottom:10px">REPLICATION SUMMARY</div>
+    <div style="font-size:9px;line-height:2.1;color:rgba(80,160,120,0.55)">
+      <div>ENZYME&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:rgba(200,240,220,0.7)">HELICASE → POLYMERASE</span></div>
+      <div>DIRECTION&nbsp;<span style="color:rgba(200,240,220,0.7)">5′ → 3′</span></div>
+      <div>FIDELITY&nbsp;&nbsp;<span style="color:rgba(80,220,140,0.8)">1 error / 10⁹ bases</span></div>
+      <div>SPEED&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:rgba(200,240,220,0.7)">~1,000 bp / sec</span></div>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(80,220,140,0.06);font-size:8px;color:rgba(60,120,90,0.5);line-height:1.7;">
+      Each strand serves as a template. The result is two identical double helices — each containing one original strand and one newly synthesized strand. This is semi-conservative replication.
+    </div>
+  </div>
+  <div class="preview-banner" id="t3-stage">
+    <span>TIER III PREVIEW</span>
+    Full replication: helicase unwinding, primase, leading<br>and lagging strand synthesis, Okazaki fragments.
+  </div>
+  <button class="icon-btn" id="t3-replay-btn" style="pointer-events:all;">↺ REPLAY</button>
+</div>
+
+<!-- TIER IV -->
+<div id="tier4-ui">
+  <div id="t4-selector">
+    <div class="trait-group">
+      <div class="trait-label">EYE COLOR</div>
+      <div class="trait-opts">
+        <button class="trait-btn active" data-trait="eye" data-val="brown">BROWN</button>
+        <button class="trait-btn" data-trait="eye" data-val="blue">BLUE</button>
+        <button class="trait-btn" data-trait="eye" data-val="green">GREEN</button>
+        <button class="trait-btn" data-trait="eye" data-val="hazel">HAZEL</button>
+      </div>
+    </div>
+    <div class="trait-group">
+      <div class="trait-label">HAIR COLOR</div>
+      <div class="trait-opts">
+        <button class="trait-btn active" data-trait="hair" data-val="black">BLACK</button>
+        <button class="trait-btn" data-trait="hair" data-val="brown">BROWN</button>
+        <button class="trait-btn" data-trait="hair" data-val="blonde">BLONDE</button>
+        <button class="trait-btn" data-trait="hair" data-val="red">RED</button>
+      </div>
+    </div>
+  </div>
+  <div id="t4-gene-label"></div>
+  <div class="panel" id="t4-panel">
+    <div id="t4-trait-title" style="font-size:22px;font-weight:300;color:rgba(80,220,140,0.85);margin-bottom:6px;">YOUR DNA</div>
+    <div id="t4-gene-name" style="font-size:11px;color:rgba(150,210,180,0.7);margin-bottom:8px;"></div>
+    <div id="t4-seq" style="font-size:9px;letter-spacing:2px;line-height:2.2;color:rgba(80,160,120,0.6);word-break:break-all;"></div>
+    <div id="t4-desc" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(80,220,140,0.06);font-size:9px;color:rgba(60,130,95,0.55);line-height:1.7;"></div>
+  </div>
+  <div class="panel" id="t4-mutation">
+    <div style="font-size:8px;letter-spacing:2px;color:rgba(255,140,60,0.45);margin-bottom:8px;">SINGLE BASE MUTATION</div>
+    <div id="t4-mut-text" style="font-size:9px;line-height:1.8;color:rgba(180,140,80,0.6);"></div>
+    <div id="t4-mut-seq" style="font-size:9px;letter-spacing:2px;line-height:2.2;color:rgba(255,120,60,0.55);word-break:break-all;margin-top:6px;"></div>
+    <div id="t4-mut-desc" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,140,60,0.08);font-size:8px;color:rgba(180,100,60,0.5);line-height:1.7;"></div>
+  </div>
+</div>
+
+<!-- Tour -->
+<div id="tour-panel">
+  <div id="tour-title"></div>
+  <div id="tour-body"></div>
+  <div id="tour-nav">
+    <button class="tour-btn" id="tour-prev">← PREV</button>
+    <div id="tour-dots"></div>
+    <button class="tour-btn" id="tour-next">NEXT →</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// §1  BASE COLOR DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const BASE_COL={
+  A:[255,180,60],   // Adenine — amber
+  T:[80,160,255],   // Thymine — blue
+  G:[80,220,140],   // Guanine — green
+  C:[200,100,255],  // Cytosine — violet
+};
+const PAIR_OF={A:'T',T:'A',G:'C',C:'G'};
+const BACKBONE_COL=[180,200,190];
+const HBOND_COL=[160,255,220];
+
+// ═══════════════════════════════════════════════════════
+// §2  THREE.JS SCENE
+// ═══════════════════════════════════════════════════════
+const container=document.getElementById('mount');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x020a06,1);
+container.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.add(new THREE.AmbientLight(0x182e20,0.9));
+const camera=new THREE.PerspectiveCamera(55,window.innerWidth/window.innerHeight,0.01,600);
+camera.position.set(0,2,18);camera.lookAt(0,0,0);
+let targetCamZ=18,currentCamZ=18;
+let t3CamScale=1,t3TargetScale=1;
+let t4CamScale=1,t4TargetScale=1;
+
+// ── Background textures ──────────────────────────────
+function makeNoiseTex(tint){
+  const S=1024,c=document.createElement('canvas');c.width=c.height=S;
+  const cx=c.getContext('2d');
+  cx.fillStyle=tint==='bio'?'#041208':'#020a06';cx.fillRect(0,0,S,S);
+  const bh=tint==='bio'?140:150;
+  for(let i=0;i<22;i++){const x=Math.random()*S,y=Math.random()*S,r=80+Math.random()*230,a=0.008+Math.random()*(tint==='bio'?0.038:0.022);const gr=cx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`hsla(${bh+Math.random()*40},35%,45%,${a})`);gr.addColorStop(1,'hsla(0,0%,0%,0)');cx.fillStyle=gr;cx.fillRect(0,0,S,S);}
+  for(let i=0;i<90;i++){const x=Math.random()*S,y=Math.random()*S,r=4+Math.random()*26,a=0.004+Math.random()*0.03;const gr=cx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(${tint==='bio'?'80,200,140':'150,215,190'},${a})`);gr.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=gr;cx.fillRect(0,0,S,S);}
+  for(let i=0;i<500;i++){const x=Math.random()*S,y=Math.random()*S,r=0.4+Math.random()*2,a=0.008+Math.random()*0.045;const gr=cx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(${tint==='bio'?'60,180,110':'140,195,170'},${a})`);gr.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=gr;cx.beginPath();cx.arc(x,y,r,0,Math.PI*2);cx.fill();}
+  return new THREE.CanvasTexture(c);
+}
+const bgGeo=new THREE.SphereGeometry(200,48,48);
+const darkTex=makeNoiseTex('dark'),bioTex=makeNoiseTex('bio');
+const bgMat=new THREE.MeshBasicMaterial({map:darkTex,side:THREE.BackSide});
+scene.add(new THREE.Mesh(bgGeo,bgMat));
+let isBio=false;
+function toggleBg(){
+  isBio=!isBio;bgMat.map=isBio?bioTex:darkTex;bgMat.needsUpdate=true;
+  renderer.setClearColor(isBio?0x041208:0x020a06,1);
+  document.getElementById('btn-bg').textContent=isBio?'🌿 BIO':'☽ VOID';
+}
+document.getElementById('btn-bg').addEventListener('click',toggleBg);
+
+// ── Shared helpers ───────────────────────────────────
+function makeGlowTex(r,g,b){
+  const c=document.createElement('canvas');c.width=c.height=64;
+  const cx=c.getContext('2d'),gr=cx.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,1)');
+  gr.addColorStop(0.18,`rgba(${r},${g},${b},0.92)`);
+  gr.addColorStop(0.52,`rgba(${r},${g},${b},0.22)`);
+  gr.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=gr;cx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(c);
+}
+function gauss(){return Math.sqrt(-2*Math.log(Math.max(1e-10,Math.random())))*Math.cos(2*Math.PI*Math.random());}
+function lerp3(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function easeInOut(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+
+// ═══════════════════════════════════════════════════════
+// §3  TIER II — DOUBLE HELIX BUILDER
+// ═══════════════════════════════════════════════════════
+// DNA geometry constants (scaled to scene units):
+// - rise per base pair: 0.34 nm → 0.34 scene units
+// - twist per base pair: 36° (10 bp per turn)
+// - helix radius: 1.0 nm → 1.0 scene units
+// - base pair width: 2.0 nm → 2.0 scene units
+// We render 24 base pairs = ~8 scene units tall
+
+const BP_RISE=0.44;     // scene units per base pair (slightly scaled for visibility)
+const BP_TWIST=Math.PI*2/10; // 36 degrees per base pair
+const HELIX_R=1.05;     // radius of backbone helix
+const N_BP=24;          // number of base pairs
+
+// A real-ish sequence for display (alternating for visual variety)
+const DEMO_SEQ='ATGCATGCATGCATGCATGCATGG';
+
+let helixGroup=null;
+const helixDL=[];
+
+function buildHelix(seq){
+  if(helixGroup){scene.remove(helixGroup);helixDL.forEach(d=>{if(d&&d.dispose)d.dispose();});helixDL.length=0;}
+  helixGroup=new THREE.Group();
+  const n=seq.length;
+  const totalH=(n-1)*BP_RISE;
+  const yOff=-totalH/2;
+
+  // Build each base pair
+  for(let i=0;i<n;i++){
+    const base=seq[i];
+    const pair=PAIR_OF[base];
+    const y=yOff+i*BP_RISE;
+    const angle=i*BP_TWIST;
+
+    // Strand 1 backbone position
+    const x1=Math.cos(angle)*HELIX_R;
+    const z1=Math.sin(angle)*HELIX_R;
+    // Strand 2 backbone position (opposite side)
+    const x2=Math.cos(angle+Math.PI)*HELIX_R;
+    const z2=Math.sin(angle+Math.PI)*HELIX_R;
+
+    // Base 1 particle cloud
+    buildBaseCloud(base,x1,y,z1,helixGroup,helixDL,1.0);
+    // Base 2 particle cloud
+    buildBaseCloud(pair,x2,y,z2,helixGroup,helixDL,1.0);
+
+    // Hydrogen bond between bases (faint connecting glow)
+    buildHBond(x1,y,z1,x2,y,z2,base,helixGroup,helixDL);
+
+    // Backbone sphere at each nucleotide
+    buildBackboneNode(x1,y,z1,helixGroup,helixDL);
+    buildBackboneNode(x2,y,z2,helixGroup,helixDL);
+  }
+
+  // Backbone ribbons (sugar-phosphate backbone)
+  buildBackboneRibbon(seq,yOff,1,helixGroup,helixDL);   // strand 1
+  buildBackboneRibbon(seq,yOff,-1,helixGroup,helixDL);  // strand 2 (inverted angle)
+
+  scene.add(helixGroup);
+}
+
+function buildBaseCloud(base,cx,cy,cz,group,dl,opacity){
+  const [r,g,b]=BASE_COL[base]||[200,200,200];
+  const N=120;
+  const sig=0.18;
+  const pos=new Float32Array(N*3),col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const gx=gauss()*sig,gy=gauss()*sig*0.6,gz=gauss()*sig;
+    pos[i*3]=cx+gx;pos[i*3+1]=cy+gy;pos[i*3+2]=cz+gz;
+    const bright=Math.exp(-0.5*(gx*gx+gz*gz)/(sig*sig))*opacity;
+    col[i*3]=bright*(r/255);col[i*3+1]=bright*(g/255);col[i*3+2]=bright*(b/255);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const tex=makeGlowTex(r,g,b);
+  const mat=new THREE.PointsMaterial({map:tex,size:0.14,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false,vertexColors:true,sizeAttenuation:true});
+  dl.push(geo,mat,tex);
+  group.add(new THREE.Points(geo,mat));
+  // Center glow sprite
+  const stex=makeGlowTex(r,g,b);
+  const smat=new THREE.SpriteMaterial({map:stex,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending,depthWrite:false});
+  const spr=new THREE.Sprite(smat);spr.position.set(cx,cy,cz);spr.scale.setScalar(0.55);
+  dl.push(stex,smat);group.add(spr);
+}
+
+function buildHBond(x1,y1,z1,x2,y2,z2,base,group,dl){
+  // Number of H bonds: A-T = 2, G-C = 3
+  const nBonds=(base==='G'||base==='C')?3:2;
+  const [r,g,b]=HBOND_COL;
+  for(let b2=0;b2<nBonds;b2++){
+    const frac=nBonds===1?0.5:(b2/(nBonds-1))*0.4+0.3;
+    const mx=x1+(x2-x1)*frac,my=y1+(y2-y1)*frac+(b2-nBonds/2)*0.06,mz=z1+(z2-z1)*frac;
+    const N=30;
+    const pos=new Float32Array(N*3),col=new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      const t2=i/(N-1);
+      const ix=x1+(x2-x1)*t2,iy=y1+(b2-nBonds/2)*0.04,iz=z1+(z2-z1)*t2;
+      pos[i*3]=ix+gauss()*0.04;pos[i*3+1]=iy+gauss()*0.03;pos[i*3+2]=iz+gauss()*0.04;
+      const bright=0.18*Math.sin(t2*Math.PI);
+      col[i*3]=bright*(r/255);col[i*3+1]=bright*(g/255);col[i*3+2]=bright*(b/255);
+    }
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+    const tex=makeGlowTex(r,g,b);const mat=new THREE.PointsMaterial({map:tex,size:0.10,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending,depthWrite:false,vertexColors:true,sizeAttenuation:true});
+    dl.push(geo,mat,tex);group.add(new THREE.Points(geo,mat));
+  }
+}
+
+function buildBackboneNode(cx,cy,cz,group,dl){
+  const [r,g,b]=BACKBONE_COL;
+  const tex=makeGlowTex(r,g,b);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.22,blending:THREE.AdditiveBlending,depthWrite:false});
+  const spr=new THREE.Sprite(mat);spr.position.set(cx,cy,cz);spr.scale.setScalar(0.32);
+  dl.push(tex,mat);group.add(spr);
+}
+
+function buildBackboneRibbon(seq,yOff,side,group,dl){
+  const n=seq.length;
+  // Backbone as a glowing particle trail — warm blue-white, same additive blending as base clouds
+  // Alternates slightly between phosphate (cool white) and sugar (warm green-white) nodes
+  for(let i=0;i<n;i++){
+    const y=yOff+i*BP_RISE;
+    const angle=i*BP_TWIST+(side===1?0:Math.PI);
+    const cx=Math.cos(angle)*HELIX_R,cz=Math.sin(angle)*HELIX_R;
+    // Phosphate node — cool blue-white glow
+    const ptex=makeGlowTex(160,220,255);
+    const pmat=new THREE.SpriteMaterial({map:ptex,transparent:true,opacity:0.28,blending:THREE.AdditiveBlending,depthWrite:false});
+    const pspr=new THREE.Sprite(pmat);pspr.position.set(cx,y,cz);pspr.scale.setScalar(0.38);
+    dl.push(ptex,pmat);group.add(pspr);
+    // Sugar node between this and next — warm green-white glow
+    if(i<n-1){
+      const y2=yOff+(i+0.5)*BP_RISE;
+      const angle2=i*BP_TWIST+BP_TWIST*0.5+(side===1?0:Math.PI);
+      const cx2=Math.cos(angle2)*HELIX_R*0.92,cz2=Math.sin(angle2)*HELIX_R*0.92;
+      const stex=makeGlowTex(100,255,180);
+      const smat=new THREE.SpriteMaterial({map:stex,transparent:true,opacity:0.16,blending:THREE.AdditiveBlending,depthWrite:false});
+      const sspr=new THREE.Sprite(smat);sspr.position.set(cx2,y2,cz2);sspr.scale.setScalar(0.24);
+      dl.push(stex,smat);group.add(sspr);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §4  TIER III — REPLICATION ANIMATION
+// ═══════════════════════════════════════════════════════
+let replGroup=null;
+let replFrame=0;
+let replRunning=true;
+const REPL_CYCLE=480;
+const replDL=[];
+const strandObjs=[];  // objects that grow/move during animation
+
+function buildReplScene(){
+  if(replGroup){scene.remove(replGroup);replDL.forEach(d=>{if(d&&d.dispose)d.dispose();});replDL.length=0;strandObjs.length=0;}
+  replGroup=new THREE.Group();
+  const seq=DEMO_SEQ.slice(0,16);
+  const n=seq.length;
+  const totalH=(n-1)*BP_RISE;
+  const yOff=-totalH/2;
+
+  // Original double helix (dims as replication proceeds)
+  for(let i=0;i<n;i++){
+    const base=seq[i],pair=PAIR_OF[base];
+    const y=yOff+i*BP_RISE,angle=i*BP_TWIST;
+    const x1=Math.cos(angle)*HELIX_R,z1=Math.sin(angle)*HELIX_R;
+    const x2=Math.cos(angle+Math.PI)*HELIX_R,z2=Math.sin(angle+Math.PI)*HELIX_R;
+    buildBaseCloud(base,x1,y,z1,replGroup,replDL,0.45);
+    buildBaseCloud(pair,x2,y,z2,replGroup,replDL,0.45);
+    buildHBond(x1,y,z1,x2,y,z2,base,replGroup,replDL);
+    buildBackboneNode(x1,y,z1,replGroup,replDL);
+    buildBackboneNode(x2,y,z2,replGroup,replDL);
+  }
+  buildBackboneRibbon(seq,yOff,1,replGroup,replDL);
+  buildBackboneRibbon(seq,yOff,-1,replGroup,replDL);
+
+  // Helicase glow — moves along helix during animation
+  const helTex=makeGlowTex(255,220,100);
+  const helMat=new THREE.SpriteMaterial({map:helTex,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,depthWrite:false});
+  const helSpr=new THREE.Sprite(helMat);helSpr.scale.setScalar(1.2);
+  replDL.push(helTex,helMat);replGroup.add(helSpr);
+  replGroup.userData.helicase={spr:helSpr,mat:helMat,yOff,totalH,n};
+
+  // New strand particles (appear during synthesis)
+  // These are pre-built but start invisible, fade in as helicase passes
+  for(let i=0;i<n;i++){
+    const base=seq[i],pair=PAIR_OF[base];
+    const y=yOff+i*BP_RISE,angle=i*BP_TWIST;
+    const x1=Math.cos(angle)*HELIX_R,z1=Math.sin(angle)*HELIX_R;
+    const x2=Math.cos(angle+Math.PI)*HELIX_R,z2=Math.sin(angle+Math.PI)*HELIX_R;
+    // New complementary bases on strand 1 (T pairs with A etc.)
+    const [r1,g1,b1]=BASE_COL[pair];
+    const t1=makeGlowTex(r1,g1,b1);
+    const m1=new THREE.SpriteMaterial({map:t1,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,depthWrite:false,color:new THREE.Color(r1/255,g1/255,b1/255)});
+    const s1=new THREE.Sprite(m1);
+    // New strand grows from outside in
+    s1.position.set(x1*2.2,y,z1*2.2);s1.scale.setScalar(0.6);
+    replDL.push(t1,m1);replGroup.add(s1);
+    strandObjs.push({spr:s1,mat:m1,endX:x1,endY:y,endZ:z1,startX:x1*2.2,startZ:z1*2.2,bpIdx:i,strand:1});
+    const [r2,g2,b2]=BASE_COL[base];
+    const t2=makeGlowTex(r2,g2,b2);
+    const m2=new THREE.SpriteMaterial({map:t2,transparent:true,opacity:0.0,blending:THREE.AdditiveBlending,depthWrite:false,color:new THREE.Color(r2/255,g2/255,b2/255)});
+    const s2=new THREE.Sprite(m2);
+    s2.position.set(x2*2.2,y,z2*2.2);s2.scale.setScalar(0.6);
+    replDL.push(t2,m2);replGroup.add(s2);
+    strandObjs.push({spr:s2,mat:m2,endX:x2,endY:y,endZ:z2,startX:x2*2.2,startZ:z2*2.2,bpIdx:i,strand:2});
+  }
+
+  scene.add(replGroup);
+  camera.position.set(5,4,16);camera.lookAt(0,0,0);
+}
+
+function stepReplication(){
+  if(!replRunning||!replGroup)return;
+  if(replFrame<REPL_CYCLE)replFrame++;
+  const f=replFrame;
+  const {helicase}=replGroup.userData;
+  if(!helicase)return;
+  const {spr:hSpr,mat:hMat,yOff,totalH,n}=helicase;
+
+  // Helicase moves from bottom to top over first 60% of cycle
+  const helFrac=Math.min(1,(f/REPL_CYCLE)/0.6);
+  const helY=yOff+helFrac*totalH;
+  hSpr.position.set(0,helY,0);
+  // Flash and fade the helicase glow
+  if(f<20)hMat.opacity=f/20*0.8;
+  else if(f<REPL_CYCLE*0.6)hMat.opacity=0.65+0.15*Math.sin(f*0.3);
+  else hMat.opacity=Math.max(0,0.65-(f-REPL_CYCLE*0.6)/(REPL_CYCLE*0.15));
+
+  // New bases assemble trailing the helicase
+  const trailDelay=8;
+  strandObjs.forEach(so=>{
+    const unlockFrac=(so.bpIdx+trailDelay)/n;
+    if(helFrac>=unlockFrac){
+      const progress=Math.min(1,(helFrac-unlockFrac)/0.15);
+      const t=easeInOut(progress);
+      so.spr.position.set(
+        so.startX+(so.endX-so.startX)*t,
+        so.endY,
+        so.startZ+(so.endZ-so.startZ)*t
+      );
+      so.mat.opacity=t*0.88;
+    }
+  });
+}
+
+function replayRepl(){
+  replFrame=0;replRunning=true;
+  strandObjs.forEach(so=>{so.mat.opacity=0;so.spr.position.set(so.startX,so.endY,so.startZ);});
+  if(replGroup&&replGroup.userData.helicase){
+    replGroup.userData.helicase.mat.opacity=0;
+    replGroup.userData.helicase.spr.position.set(0,replGroup.userData.helicase.yOff,0);
+  }
+}
+document.getElementById('t3-replay-btn').addEventListener('click',replayRepl);
+
+// ═══════════════════════════════════════════════════════
+// §5  TRAIT / GENETICS DATA
+// ═══════════════════════════════════════════════════════
+// Real gene segments (simplified representative sequences)
+// Eye color — OCA2/HERC2 region (chromosome 15)
+// Hair color — MC1R gene (chromosome 16)
+// These are real gene identifiers with simplified illustrative sequences
+// clearly labeled as representative/educational
+
+const TRAIT_DATA={
+  eye:{
+    brown:{
+      gene:'OCA2 · rs12913832',chromosome:'Chr 15',
+      seq:'ATGCAGTACGTTACGATCGAATCG',
+      variant:'A allele (dominant)',
+      desc:'Brown eyes result from high melanin density in the iris stroma. The OCA2 gene regulates melanin production. The A allele at rs12913832 maintains the OCA2 promoter activity, producing abundant eumelanin pigment.',
+      conf:97,
+      mutSeq:'ATGCAGTACGTTACGATCGAGTCG',
+      mutPos:21,
+      mutFrom:'A',mutTo:'G',
+      mutDesc:'The G allele (rs12913832) reduces OCA2 expression by ~70%, dramatically lowering melanin production. This single A→G change is the primary determinant of blue eyes in European populations. One letter. Billions of blue-eyed people.',
+    },
+    blue:{
+      gene:'HERC2 · rs12913832',chromosome:'Chr 15',
+      seq:'ATGCAGTACGTTACGATCGAGTCG',
+      variant:'G allele (recessive pair)',
+      desc:'Blue eyes contain the same melanin-producing cells as brown eyes — but the G allele reduces OCA2 activity to near-zero. The blue color is structural, caused by light scattering (Tyndall effect) through a melanin-sparse stroma.',
+      conf:97,
+      mutSeq:'ATGCAGTACGTTACGATCGAATCG',
+      mutPos:21,
+      mutFrom:'G',mutTo:'A',
+      mutDesc:'Changing this single G back to A restores OCA2 promoter activity. Brown pigment returns. The difference between blue eyes and brown eyes in your DNA is literally one base pair out of 6.4 billion.',
+    },
+    green:{
+      gene:'OCA2 + HERC2',chromosome:'Chr 15',
+      seq:'ATGCAGTACGTTACGATCGAGTCA',
+      variant:'Intermediate expression',
+      desc:'Green eyes result from low to moderate melanin combined with yellowish lipochrome pigment and Rayleigh light scattering. Multiple variants across OCA2, HERC2, and SLC24A4 interact — green is one of the most genetically complex eye colors.',
+      conf:88,
+      mutSeq:'ATGCAGTACGTTACGATCGAATCA',
+      mutPos:21,
+      mutFrom:'G',mutTo:'A',
+      mutDesc:'Shifting this position toward the A allele increases OCA2 expression and melanin production — shifting the phenotype toward hazel or brown. The boundary between green, hazel, and brown is a gradient written in base pairs.',
+    },
+    hazel:{
+      gene:'OCA2 + TYRP1',chromosome:'Chr 15 · Chr 9',
+      seq:'ATGCAGTACGTTACGATCGAATCA',
+      variant:'Mixed expression',
+      desc:'Hazel eyes show a mixture of brown and green, often with a golden rim near the pupil. Multiple genes contribute — OCA2 controls base melanin level while TYRP1 influences brown vs. yellow-green tones. The pattern can change with light.',
+      conf:82,
+      mutSeq:'ATGCAGTACGTTACGATCGAGTCA',
+      mutPos:21,
+      mutFrom:'A',mutTo:'G',
+      mutDesc:'Reducing OCA2 expression shifts hazel toward green-gray. The layered pigmentation of hazel eyes means small sequence changes create visible, unpredictable phenotypic variation — one reason eye color inheritance surprised early geneticists.',
+    },
+  },
+  hair:{
+    black:{
+      gene:'MC1R + TYRP1',chromosome:'Chr 16 · Chr 9',
+      seq:'ATGCAGTTCGCCATCGATCGAACG',
+      variant:'Val92Met wild type',
+      desc:'Black hair results from maximum eumelanin production. The MC1R gene encodes the melanocortin-1 receptor — when fully functional, it drives maximum eumelanin synthesis in melanocytes. Black hair is the ancestral human phenotype.',
+      conf:95,
+      mutSeq:'ATGCAGTTCGCCATCAATCGAACG',
+      mutPos:15,
+      mutFrom:'G',mutTo:'A',
+      mutDesc:'This variant (MC1R Arg151Cys) partially reduces receptor function, shifting melanin production toward phaeomelanin. Hair color shifts from black toward brown or auburn. One of over 30 known MC1R variants affecting hair color.',
+    },
+    brown:{
+      gene:'MC1R · rs1805007',chromosome:'Chr 16',
+      seq:'ATGCAGTTCGCCATCAATCGAACG',
+      variant:'Reduced eumelanin',
+      desc:'Brown hair reflects intermediate MC1R activity — enough eumelanin for dark pigmentation but not at maximum. Multiple MC1R variants collectively reduce receptor efficiency, shifting the eumelanin-to-phaeomelanin ratio.',
+      conf:93,
+      mutSeq:'ATGCAGTTCGCCATCAATCGAATG',
+      mutPos:22,
+      mutFrom:'C',mutTo:'T',
+      mutDesc:'This position contributes to the red hair phenotype when combined with other MC1R variants. Brown hair sits genetically between black and red — a quantitative trait written across multiple positions in the MC1R sequence.',
+    },
+    blonde:{
+      gene:'KITLG · rs12821256',chromosome:'Chr 12',
+      seq:'ATGCAGTACGTTACGATCGAACGT',
+      variant:'T allele (reduced KIT ligand)',
+      desc:'Blonde hair is linked to a regulatory region near KITLG (KIT ligand), a gene that affects melanocyte development. The causal variant is only active in hair follicles — not skin or eyes — one of the first examples of tissue-specific genetic effects on appearance.',
+      conf:88,
+      mutSeq:'ATGCAGTACGTTACGATCGAACGG',
+      mutPos:23,
+      mutFrom:'T',mutTo:'G',
+      mutDesc:'The ancestral G allele maintains normal KITLG expression in follicles, producing more melanin and darker hair. The derived T allele that causes blonde hair likely spread through positive selection in northern European populations during the last ice age.',
+    },
+    red:{
+      gene:'MC1R · Arg160Trp',chromosome:'Chr 16',
+      seq:'ATGCAGTTCGCCATCAATCGAATG',
+      variant:'Loss of function variant',
+      desc:'Red hair is caused by MC1R loss-of-function variants that essentially disable the receptor. Without MC1R signaling, melanocytes default to producing phaeomelanin (red-yellow) instead of eumelanin (brown-black). Red hair is recessive — two copies needed.',
+      conf:98,
+      mutSeq:'ATGCAGTTCGCCATCGATCGAATG',
+      mutPos:15,
+      mutFrom:'A',mutTo:'G',
+      mutDesc:'Restoring this position partially recovers MC1R function. Hair shifts toward auburn or brown-red. Red hair is the most strongly genetically determined hair color — MC1R variants explain over 80% of red hair cases, making it one of the most predictable visible traits in the human genome.',
+    },
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// §6  TIER IV — PERSONAL DNA SCENE
+// ═══════════════════════════════════════════════════════
+let t4Group=null;
+let selectedEye='brown',selectedHair='black';
+let t4Phase='idle',t4Progress=0,t4HoldTimer=0;
+const t4DL=[];
+const t4AtomObjs=[];
+
+function disposeT4(){
+  if(t4Group)scene.remove(t4Group);
+  t4DL.forEach(d=>{if(d&&d.dispose)d.dispose();});t4DL.length=0;
+  t4AtomObjs.length=0;t4Group=null;
+}
+
+function buildT4Scene(eyeVal,hairVal){
+  disposeT4();
+  t4Group=new THREE.Group();
+  const eyeData=TRAIT_DATA.eye[eyeVal];
+  const hairData=TRAIT_DATA.hair[hairVal];
+  const seq1=eyeData.seq;
+  const seq2=hairData.seq;
+  const n=Math.min(seq1.length,seq2.length);
+
+  // Show two short DNA strands — one for eye color gene, one for hair color gene
+  // Side by side, slightly offset
+  buildMiniHelix(seq1,t4Group,t4DL,-3.5,eyeVal,'eye');
+  buildMiniHelix(seq2,t4Group,t4DL,3.5,hairVal,'hair');
+
+  // Mutation indicator (shown when user has looked at mutation panel)
+  scene.add(t4Group);
+  camera.position.set(0,5,24);camera.lookAt(0,0,0);
+  t4Phase='idle';t4Progress=0;t4HoldTimer=0;
+  setTimeout(()=>{t4Phase='forming';},400);
+}
+
+function buildMiniHelix(seq,group,dl,xOffset,traitVal,traitType){
+  const n=Math.min(seq.length,16);
+  const totalH=(n-1)*BP_RISE*0.8;
+  const yOff=-totalH/2;
+  const scale=0.8;
+
+  for(let i=0;i<n;i++){
+    const base=seq[i];if(!BASE_COL[base])continue;
+    const pair=PAIR_OF[base];if(!pair)continue;
+    const y=yOff+i*BP_RISE*scale;
+    const angle=i*BP_TWIST;
+    const x1=xOffset+Math.cos(angle)*HELIX_R*scale;
+    const z1=Math.sin(angle)*HELIX_R*scale;
+    const x2=xOffset+Math.cos(angle+Math.PI)*HELIX_R*scale;
+    const z2=Math.sin(angle+Math.PI)*HELIX_R*scale;
+    buildBaseCloud(base,x1,y,z1,group,dl,0.75);
+    buildBaseCloud(pair,x2,y,z2,group,dl,0.75);
+    buildHBond(x1,y,z1,x2,y,z2,base,group,dl);
+    buildBackboneNode(x1,y,z1,group,dl);
+    buildBackboneNode(x2,y,z2,group,dl);
+  }
+  buildBackboneRibbon(seq.slice(0,n),yOff,1,group,dl);
+  buildBackboneRibbon(seq.slice(0,n),yOff,-1,group,dl);
+
+  // Label glow at top of each mini helix
+  const col=traitType==='eye'?[200,160,80]:[80,180,240];
+  const lTex=makeGlowTex(col[0],col[1],col[2]);
+  const lMat=new THREE.SpriteMaterial({map:lTex,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending,depthWrite:false});
+  const lSpr=new THREE.Sprite(lMat);
+  lSpr.position.set(xOffset,(n-1)*BP_RISE*scale/2+0.8,0);lSpr.scale.setScalar(1.0);
+  dl.push(lTex,lMat);group.add(lSpr);
+}
+
+function updateT4UI(eyeVal,hairVal){
+  const ed=TRAIT_DATA.eye[eyeVal];
+  const hd=TRAIT_DATA.hair[hairVal];
+  document.getElementById('t4-trait-title').textContent=`${eyeVal.toUpperCase()} EYES · ${hairVal.toUpperCase()} HAIR`;
+  document.getElementById('t4-gene-name').textContent=`${ed.gene}  ·  ${hd.gene}`;
+  // Color code the sequence
+  function colorSeq(seq,mutPos,mutFrom){
+    let html='';
+    for(let i=0;i<seq.length;i++){
+      const b=seq[i];
+      const [r,g,b2]=BASE_COL[b]||[200,200,200];
+      const isMut=(i===mutPos);
+      html+=`<span style="color:rgba(${r},${g},${b2},${isMut?'0.95':'0.65'})">${b}</span>`;
+    }
+    return html;
+  }
+  document.getElementById('t4-seq').innerHTML=`EYE: ${colorSeq(ed.seq)}<br>HAIR: ${colorSeq(hd.seq)}`;
+  document.getElementById('t4-desc').textContent=ed.desc;
+  // Mutation panel — show eye color mutation
+  document.getElementById('t4-mut-text').textContent=`Position ${ed.mutPos+1}: ${ed.mutFrom} → ${ed.mutTo}`;
+  function colorMutSeq(seq,pos,from,to){
+    let html='';
+    for(let i=0;i<seq.length;i++){
+      const b=seq[i];
+      const [r,g,b2]=BASE_COL[b]||[200,200,200];
+      const isMut=(i===pos);
+      html+=`<span style="color:rgba(${isMut?'255,120,60':r+','+g+','+b2},${isMut?'0.98':'0.5'})">${b}</span>`;
+    }
+    return html;
+  }
+  document.getElementById('t4-mut-seq').innerHTML=colorMutSeq(ed.mutSeq,ed.mutPos,ed.mutFrom,ed.mutTo);
+  document.getElementById('t4-mut-desc').textContent=ed.mutDesc;
+  // Gene label in scene
+  const gl=document.getElementById('t4-gene-label');
+  gl.innerHTML=`${ed.gene} · ${ed.chromosome}<br>${hd.gene} · ${hd.chromosome}`;
+  gl.classList.add('visible');
+  setTimeout(()=>gl.classList.remove('visible'),4000);
+}
+
+// Trait button wiring
+document.querySelectorAll('.trait-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const trait=btn.dataset.trait,val=btn.dataset.val;
+    document.querySelectorAll(`.trait-btn[data-trait="${trait}"]`).forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(trait==='eye')selectedEye=val;
+    else selectedHair=val;
+    buildT4Scene(selectedEye,selectedHair);
+    updateT4UI(selectedEye,selectedHair);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// §7  TIER I BASE CARDS
+// ═══════════════════════════════════════════════════════
+document.querySelectorAll('.base-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    const base=card.dataset.base;
+    buildHelix(DEMO_SEQ);
+    updateT2UI(base);
+    showTier(2);
+  });
+});
+
+function updateT2UI(base){
+  const [r,g,b]=BASE_COL[base]||[80,220,140];
+  const pair=PAIR_OF[base];
+  document.getElementById('t2-symbol').textContent=`${base}·${pair}`;
+  document.getElementById('t2-symbol').style.color=`rgba(${r},${g},${b},0.9)`;
+  document.getElementById('t2-name').textContent='Double Helix · '+N_BP+' Base Pairs Shown';
+  document.getElementById('t2-stats').innerHTML=
+    `<div>RISE/BP&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:rgba(180,240,210,0.7)">0.34 nm</span></div>`+
+    `<div>TWIST/BP&nbsp;&nbsp;&nbsp;<span style="color:rgba(180,240,210,0.7)">36°</span></div>`+
+    `<div>HELIX DIA&nbsp;&nbsp;<span style="color:rgba(180,240,210,0.7)">2.0 nm</span></div>`+
+    `<div>H-BONDS&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:rgba(180,240,210,0.7)">${base==='G'||base==='C'?'3 (G·C)':'2 (A·T)'}</span></div>`;
+  const descs={
+    A:'You selected Adenine — the amber base. It pairs with Thymine through 2 hydrogen bonds. The helix shows all 24 base pairs with Adenine positions highlighted.',
+    T:'You selected Thymine — the blue base. It pairs only with Adenine. Thymine is unique to DNA; in RNA it is replaced by Uracil.',
+    G:'You selected Guanine — the green base. It forms 3 hydrogen bonds with Cytosine — the strongest pairing. High GC content makes DNA thermally stable.',
+    C:'You selected Cytosine — the violet base. It forms 3 hydrogen bonds with Guanine. Cytosine is the most chemically reactive base and a common mutation hotspot.',
+  };
+  document.getElementById('t2-desc').textContent=descs[base]||'';
+  // Base key
+  let keyHtml='';
+  Object.entries(BASE_COL).forEach(([b,[r,g,bl]])=>{
+    keyHtml+=`<div style="display:flex;align-items:center;gap:5px;margin:2px 0;font-size:8px;color:rgba(${r},${g},${bl},0.65)"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(${r},${g},${bl},0.65)"></span>${b} · ${b==='A'?'ADENINE':b==='T'?'THYMINE':b==='G'?'GUANINE':'CYTOSINE'} · pairs ${PAIR_OF[b]}</div>`;
+  });
+  document.getElementById('t2-base-key').innerHTML=keyHtml;
+}
+
+// ═══════════════════════════════════════════════════════
+// §8  GUIDED TOUR
+// ═══════════════════════════════════════════════════════
+let tourOpen=false,tourStep=0,currentTour=1;
+const TOUR_STEPS={
+  1:[
+    {title:'The alphabet of life',body:'All hereditary information in every living thing on Earth is encoded in just four molecules: Adenine, Thymine, Guanine, and Cytosine. These are not metaphors or models — they are the actual physical characters in which your genome is written. Three billion of them, end to end, in every cell of your body.'},
+    {title:'Why only four?',body:'A·T and G·C are complementary pairs — their shapes are chemically perfect mirror fits. This complementarity is not a coincidence. It is the physical basis of heredity: one strand can always reconstruct the other. The information is redundant by design, robust against damage, and copyable with extraordinary fidelity.'},
+    {title:'The energy of life',body:'Adenine appears here as a DNA base — but it is also the A in ATP, adenosine triphosphate. The same molecule that carries your genetic code also powers every muscle contraction, every thought, every heartbeat. The alphabet of life and the currency of life are the same molecule in different contexts.'},
+    {title:'Select a base to begin',body:'Click any of the four bases to visualize the actual 3D structure of the double helix in Tier II. The positions of the atoms, the twist of the helix, the spacing between base pairs — all of it rendered from real crystallographic measurements.'},
+  ],
+  2:[
+    {title:'The double helix',body:'What you are looking at is the structure Watson and Crick described in 1953 — 25 words and a diagram that changed biology forever. The two strands wind around each other at exactly 36° per base pair, completing one full turn every 10 base pairs. This geometry is not arbitrary. It is the shape that maximizes base stacking energy while allowing the strands to be read and copied.'},
+    {title:'The base pairs',body:'The colored clouds between the backbone strands are the base pairs — the actual information. Amber is Adenine. Blue is Thymine. Green is Guanine. Violet is Cytosine. The faint hazes connecting each pair are the hydrogen bonds — weak individually, but there are millions of them. Collectively they hold the entire structure together.'},
+    {title:'The backbone',body:'The grey ribbon running along each strand is the sugar-phosphate backbone — the structural framework that holds the bases in sequence. It carries no genetic information itself. It is scaffolding. The information is entirely in the order of the colored bases between the two strands.'},
+    {title:'Drag to explore',body:'Spin the helix. Look at it from the end — you will see the spiral stacking of base pairs like a circular staircase. Zoom in on the hydrogen bonds. Zoom out to see the full molecule. This is what every cell in your body is doing right now — being read, copied, repaired, and expressed into the proteins that make you who you are.'},
+  ],
+  3:[
+    {title:'The problem of copying',body:'Before a cell divides, it must copy its entire genome — 6.4 billion base pairs — with near-perfect accuracy in a matter of hours. The mechanism that does this is one of the most elegant molecular machines in biology.'},
+    {title:'Helicase unzips the helix',body:'The glowing point moving along the DNA is helicase — an enzyme that breaks the hydrogen bonds between base pairs, unzipping the double helix into two single strands. Each single strand now serves as a template for building a new complementary strand.'},
+    {title:'Polymerase builds the new strands',body:'DNA polymerase reads each template strand in the 3′ to 5′ direction and assembles new complementary bases in the 5′ to 3′ direction. It can only add nucleotides to an existing strand — it needs a primer to start. Watch the new bases arriving from outside and locking into position.'},
+    {title:'Semi-conservative result',body:'The result is two complete double helices — each containing one original strand and one newly synthesized strand. This is called semi-conservative replication. Every time your cells divide, half of your original DNA is passed to each daughter cell. The strand in you right now may contain bases that were in your great-grandparents.'},
+  ],
+  4:[
+    {title:'This is your DNA',body:'What you are looking at are two real gene segments — one from the region that determines your eye color, one from the gene that controls your hair color. The base pair sequences shown are representative of the actual variants associated with your selected traits.'},
+    {title:'The eye color gene',body:'Eye color is primarily determined by a single position in the HERC2/OCA2 region on chromosome 15. The base at rs12913832 controls how much melanin your iris produces. One position. A or G. Brown eyes or blue. This is not a simplification — it is genuinely that direct for most people.'},
+    {title:'One mutation, one change',body:'Look at the mutation panel. That highlighted base — the one in a different color — is the difference. One substitution in three billion base pairs. That is the distance between the trait you have and the alternative. This is what mutation looks like at the molecular level. Not damage. Not disaster. Just a different letter.'},
+    {title:'You are reading yourself',body:'The sequence on screen is a small window into the actual code of your appearance. The traits you can see in a mirror every day — your eye color, your hair color — were written in four-letter language in a molecule too small to see, before you were born. You are not just looking at DNA. You are looking at yourself.'},
+  ],
+};
+
+function showTourStep(step){
+  const steps=TOUR_STEPS[currentTour]||TOUR_STEPS[1];
+  tourStep=Math.max(0,Math.min(step,steps.length-1));
+  const s=steps[tourStep];
+  document.getElementById('tour-title').textContent=s.title;
+  document.getElementById('tour-body').textContent=s.body;
+  document.getElementById('tour-prev').disabled=(tourStep===0);
+  document.getElementById('tour-next').disabled=(tourStep===steps.length-1);
+  const dots=document.getElementById('tour-dots');dots.innerHTML='';
+  steps.forEach((_,i)=>{const d=document.createElement('div');d.className='tour-dot'+(i===tourStep?' active':'');dots.appendChild(d);});
+}
+function openTour(){tourOpen=true;document.getElementById('tour-panel').classList.add('open');document.getElementById('btn-tour').classList.add('active');showTourStep(0);}
+function closeTour(){tourOpen=false;document.getElementById('tour-panel').classList.remove('open');document.getElementById('btn-tour').classList.remove('active');}
+document.getElementById('btn-tour').addEventListener('click',()=>tourOpen?closeTour():openTour());
+document.getElementById('tour-prev').addEventListener('click',()=>showTourStep(tourStep-1));
+document.getElementById('tour-next').addEventListener('click',()=>showTourStep(tourStep+1));
+
+// ═══════════════════════════════════════════════════════
+// §9  CONTROLS
+// ═══════════════════════════════════════════════════════
+let drag=false,lx=0,ly=0,autoRot=true,autoTid=null;
+const axX=new THREE.Vector3(1,0,0),axY=new THREE.Vector3(0,1,0);
+let currentTier=1;
+
+function applyDrag(dx,dy){
+  const target=(currentTier===2&&helixGroup)?helixGroup:(currentTier===3&&replGroup)?replGroup:(currentTier===4&&t4Group)?t4Group:null;
+  if(!target)return;
+  target.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axY,dx*0.008));
+  target.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axX,dy*0.008));
+}
+
+const dom=renderer.domElement;
+dom.addEventListener('mousedown',e=>{if(currentTier>1){drag=true;lx=e.clientX;ly=e.clientY;autoRot=false;clearTimeout(autoTid);}});
+window.addEventListener('mousemove',e=>{if(!drag)return;applyDrag(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;});
+window.addEventListener('mouseup',()=>{drag=false;autoTid=setTimeout(()=>autoRot=true,3000);});
+
+let lastPinch=null;
+dom.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&currentTier>1){drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;autoRot=false;clearTimeout(autoTid);lastPinch=null;}
+  else if(e.touches.length===2){drag=false;const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;lastPinch=Math.sqrt(dx*dx+dy*dy);}
+},{passive:false});
+dom.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&drag){applyDrag(e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;}
+  else if(e.touches.length===2&&lastPinch!==null){
+    const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.sqrt(dx*dx+dy*dy),delta=lastPinch-dist;lastPinch=dist;
+    if(currentTier===2)targetCamZ=Math.max(5,Math.min(60,targetCamZ+delta*0.06));
+    if(currentTier===3)t3TargetScale=Math.max(0.4,Math.min(3,t3TargetScale+delta*0.004));
+    if(currentTier===4)t4TargetScale=Math.max(0.4,Math.min(3,t4TargetScale+delta*0.004));
+  }
+},{passive:false});
+dom.addEventListener('touchend',e=>{if(e.touches.length===0){drag=false;lastPinch=null;autoTid=setTimeout(()=>autoRot=true,3000);}if(e.touches.length===1)lastPinch=null;},{passive:true});
+dom.addEventListener('wheel',e=>{
+  if(currentTier===2)targetCamZ=Math.max(5,Math.min(60,targetCamZ+e.deltaY*0.015));
+  if(currentTier===3)t3TargetScale=Math.max(0.4,Math.min(3,t3TargetScale+e.deltaY*0.001));
+  if(currentTier===4)t4TargetScale=Math.max(0.4,Math.min(3,t4TargetScale+e.deltaY*0.001));
+},{passive:true});
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+window.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4')showTier(parseInt(e.key));
+  if(e.key==='t'||e.key==='T'){if(currentTier>1){tourOpen?closeTour():openTour();}}
+  if(e.key==='b'||e.key==='B')toggleBg();
+  if(e.key==='Escape')closeTour();
+});
+
+// ═══════════════════════════════════════════════════════
+// §10  SCALE BAR
+// ═══════════════════════════════════════════════════════
+// DNA scale: scene unit mapping
+// One base pair = 0.34 nm in real DNA, we render at BP_RISE=0.44 scene units
+// → 1 scene unit ≈ 0.34/0.44 = 0.773 nm
+const SCENE_PER_NM=1/0.773; // ≈ 1.29 scene units per nm
+const NICE_NM=[0.1,0.2,0.5,1,2,5,10,20];
+function updateScaleBar(){
+  const sw=document.getElementById('scale-wrap');
+  if(currentTier===1){sw.style.display='none';return;}
+  sw.style.display='block';
+  const camZ=currentTier===2?currentCamZ:currentTier===3?20*t3CamScale:24*t4CamScale;
+  const viewH=2*camZ*Math.tan(27.5*Math.PI/180);
+  const pxPerScene=window.innerHeight/viewH;
+  const pxPerNm=pxPerScene/SCENE_PER_NM;
+  const chosen=NICE_NM.find(v=>v*pxPerNm>=54)||NICE_NM[NICE_NM.length-1];
+  const barPx=Math.min(220,Math.round(chosen*pxPerNm));
+  document.getElementById('scale-line').style.width=barPx+'px';
+  document.getElementById('scale-label').textContent=chosen<1?`${Math.round(chosen*10)*100} pm`:`${chosen} nm`;
+  document.getElementById('scale-note').textContent='ONE BASE PAIR = 0.34 nm';
+}
+
+// ═══════════════════════════════════════════════════════
+// §11  TIER SYSTEM
+// ═══════════════════════════════════════════════════════
+const TIER_HEADERS={
+  1:'TIER I · THE FOUR NUCLEOTIDE BASES',
+  2:'TIER II · DOUBLE HELIX VISUALIZATION',
+  3:'TIER III · DNA REPLICATION',
+  4:'TIER IV · YOUR PERSONAL DNA'
+};
+
+function showTier(n){
+  currentTier=n;currentTour=n;
+  document.getElementById('header').textContent=TIER_HEADERS[n];
+  document.querySelectorAll('.tier-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.tier)===n));
+  document.getElementById('tier1-ui').style.display=n===1?'flex':'none';
+  document.getElementById('tier2-ui').style.display=n===2?'block':'none';
+  document.getElementById('tier3-ui').style.display=n===3?'block':'none';
+  document.getElementById('tier4-ui').style.display=n===4?'block':'none';
+  document.getElementById('btn-tour').style.display=n===1?'none':'';
+  if(n===1&&tourOpen)closeTour();
+  if(helixGroup)helixGroup.visible=(n===2);
+  if(replGroup)replGroup.visible=(n===3);
+  if(t4Group)t4Group.visible=(n===4);
+
+  if(n===1){camera.position.set(0,0,10);camera.lookAt(0,0,0);}
+  else if(n===2){
+    targetCamZ=18;
+    if(!helixGroup){buildHelix(DEMO_SEQ);updateT2UI('A');}
+    else helixGroup.visible=true;
+  } else if(n===3){
+    t3CamScale=1;t3TargetScale=1;
+    if(!replGroup){buildReplScene();replayRepl();}
+    else{replGroup.visible=true;replayRepl();}
+  } else if(n===4){
+    t4CamScale=1;t4TargetScale=1;
+    if(!t4Group){buildT4Scene(selectedEye,selectedHair);updateT4UI(selectedEye,selectedHair);}
+    else{t4Group.visible=true;}
+  }
+}
+
+document.querySelectorAll('.tier-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>showTier(parseInt(btn.dataset.tier)));
+});
+
+// ═══════════════════════════════════════════════════════
+// §12  ANIMATION LOOP
+// ═══════════════════════════════════════════════════════
+let t=0;
+// Pre-build helix so Tier II is ready
+buildHelix(DEMO_SEQ);updateT2UI('A');
+showTier(1);
+
+(function animate(){
+  requestAnimationFrame(animate);t+=0.01;
+
+  if(currentTier===2){
+    currentCamZ+=(targetCamZ-currentCamZ)*0.04;
+    camera.position.set(0,currentCamZ*0.12,currentCamZ);camera.lookAt(0,0,0);
+    if(helixGroup&&autoRot){
+      helixGroup.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axY,0.004));
+      // Subtle breathe
+      helixGroup.scale.setScalar(1+0.008*Math.sin(t*0.8));
+    }
+    updateScaleBar();
+  }
+
+  if(currentTier===3){
+    t3CamScale+=(t3TargetScale-t3CamScale)*0.06;
+    camera.position.set(5*t3CamScale,4*t3CamScale,16*t3CamScale);camera.lookAt(0,0,0);
+    stepReplication();
+    if(replGroup&&autoRot)replGroup.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axY,0.0015));
+    updateScaleBar();
+  }
+
+  if(currentTier===4){
+    t4CamScale+=(t4TargetScale-t4CamScale)*0.06;
+    camera.position.set(0,5*t4CamScale,24*t4CamScale);camera.lookAt(0,0,0);
+    if(t4Group&&autoRot)t4Group.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axY,0.003));
+    updateScaleBar();
+  }
+
+  renderer.render(scene,camera);
+})();
+</script>
+</body>
+</html>
