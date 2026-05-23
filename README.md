@@ -36,10 +36,19 @@ Mutation sandbox — introduce mutations and watch their structural effects in r
 Connection to Quantum Sandbox — zoom from the electron bonds in a base pair all the way out to the full helix
 
 
-The Simply Everything project
-DNA Sandbox is part of a growing collection of visual learning tools. The goal is one sandbox for every complex invisible system that has ever been taught badly with a static diagram.
-→ Quantum Sandbox — atoms, orbitals, particle physics
-→ Simply Everything — the platform these tools are building toward
+#Part of the Sandbox Series
+DNA Sandbox is part of a growing series of interactive
+science visualizations designed to make complex systems
+feel real and explorable. Each sandbox builds on the last.
+
+- [Quantum Sandbox](https://silent-pfil.github.io/Quantum-Sandbox/) live
+- [DNA Sandbox](https://silent-pfil.github.io/DNA-Sandbox/) — live
+- [EMS Sandbox](https://silent-pfil.github.io/EMS-Sandbox/) — live
+- [Cellular Sandbox](https://silent-pfil.github.io/Cell-Sandbox/) — live
+- [Emergence Sandbox](https://silent-pfil.github.io/Emergence-Sandbox/) — live
+- Neural Transmission Sandbox — in development
+- Newtonian Sandbox — "Universe Sandbox"
+- Einsteinian Sandbox — in development
 
 What I'm asking for
 Tell me what's wrong. Tell me what's missing. Tell me if something made you feel something.
